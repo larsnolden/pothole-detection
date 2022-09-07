@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">TrackingApp</string>
+    <string name="user_address">User Address</string>
+    <string name="get_current_location">Get Current Location</string>
+    <string name="latitude">\"Latitude: \"</string>
+    <string name="longitude">\"Longitude: \"</string>
+</resources>
