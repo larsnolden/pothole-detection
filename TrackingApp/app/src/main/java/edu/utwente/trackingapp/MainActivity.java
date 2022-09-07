@@ -6,12 +6,14 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Debug;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
@@ -39,15 +41,18 @@ import com.karumi.dexter.listener.PermissionDeniedResponse;
 import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.single.PermissionListener;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 
-
-public class MainActivity extends AppCompatActivity {
-
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int REQUEST_CHECK_SETTINGS = 100;
     private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     private static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     private static final String TAG = MainActivity.class.getSimpleName();
 
+    // location
     private FusedLocationProviderClient mFusedLocationClient;
     private SettingsClient mSettingsClient;
     private LocationRequest mLocationRequest;
@@ -57,14 +62,27 @@ public class MainActivity extends AppCompatActivity {
     private boolean mRequestingLocationUpdates = false;
 
     private TextView AddressText;
+    private TextView AccelerationXText;
+    private TextView AccelerationYText;
+    private TextView AccelerationZText;
 
+    // accelerometer
+    private float[] acceleration = {0, 0, 0};
+
+    private SensorManager mSensorManager;
+    private Sensor accelerometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //  location
         AddressText = findViewById(R.id.addressText);
+
+        AccelerationXText = findViewById(R.id.accelerationX);
+        AccelerationYText = findViewById(R.id.accelerationY);
+        AccelerationZText = findViewById(R.id.accelerationZ);
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
@@ -112,6 +130,13 @@ public class MainActivity extends AppCompatActivity {
                         token.continuePermissionRequest();
                     }
                 }).check();
+
+        // Get an instance of the SensorManager
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        //  Accelerometer
+        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mSensorManager.registerListener(MainActivity.this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     private void openSettings() {
@@ -166,6 +191,21 @@ public class MainActivity extends AppCompatActivity {
     private boolean checkPermissions() {
         int permissionState = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
         return permissionState == PackageManager.PERMISSION_GRANTED;
+    }
+
+    public void onAccuracyChanged(Sensor sensor, int i) {
+        // do nothing
+    }
+
+    public void onSensorChanged(SensorEvent event) {
+        // we received a sensor event. it is a good practice to check
+        // that we received the proper event
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            acceleration = event.values;
+            AccelerationXText.setText(String.valueOf(acceleration[0]));
+            AccelerationYText.setText(String.valueOf(acceleration[1]));
+            AccelerationZText.setText(String.valueOf(acceleration[2]));
+        }
     }
 
     @Override

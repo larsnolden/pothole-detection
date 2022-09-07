@@ -16,5 +16,67 @@
         android:textColor="@android:color/black"
         android:textSize="19sp" />
 
+    <TableLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/labelXAccel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X: " />
+
+            <TextView
+                android:id="@+id/accelerationX"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X Accel"
+                android:textColor="@android:color/black"
+                android:textSize="19sp" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/labelYAccel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="y: " />
+
+            <TextView
+                android:id="@+id/accelerationY"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Y Accel"
+                android:textColor="@android:color/black"
+                android:textSize="19sp" />
+        </TableRow>
+
+        <TableRow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/labelZAccel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Z:" />
+
+            <TextView
+                android:id="@+id/accelerationZ"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Z Accel"
+                android:textColor="@android:color/black"
+                android:textSize="19sp" />
+        </TableRow>
+
+    </TableLayout>
 
 </LinearLayout>
