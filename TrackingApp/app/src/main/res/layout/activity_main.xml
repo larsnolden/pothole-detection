@@ -83,8 +83,25 @@
         android:id="@+id/button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:onClick="onClickBtn"
+        android:onClick="onClickToggleBtn"
         android:text="Start Recording"
         android:translationY="50px" />
+
+    <Button
+        android:id="@+id/button2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onClickAnalyseBtn"
+        android:text="Analyse"
+        android:translationY="50px" />
+
+    <EditText
+        android:id="@+id/threshold"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="19"
+        android:inputType="numberDecimal"
+        android:text="2"
+        android:translationY="150px" />
 
 </LinearLayout>

@@ -13,11 +13,14 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Debug;
+import android.os.Environment;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,17 +53,22 @@ import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.single.PermissionListener;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int REQUEST_CHECK_SETTINGS = 100;
     private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     private static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String FILE_NAME = "tracking-app-logs.txt";
 
     // location
     private FusedLocationProviderClient mFusedLocationClient;
@@ -79,24 +87,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView AccelerationZText;
 
     private Button ToggleButton;
+    private Button AnalyseButton;
 
-
-
-
+    private EditText ThresholdInput;
 
     // accelerometer
-    float[] acceleration = {0, 0, 0};
-    private float[][] accelerations = new float[100000][3];
-    private int accelerationsIndex = 0;
+    List<float[]> accelerations = new ArrayList<float[]>();
     private SensorManager mSensorManager;
     private Sensor accelerometer;
+
+    List<float[]> potholeLocations = new ArrayList<float[]>();
+
+    Context context = this;
 
     // File
     FileOutputStream stream;
 
-    public MainActivity() throws FileNotFoundException {
-    }
-
+    public MainActivity() throws FileNotFoundException {}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +118,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         AccelerationZText = findViewById(R.id.accelerationZ);
 
         ToggleButton = findViewById(R.id.button);
+        AnalyseButton = findViewById(R.id.button2);
+        AnalyseButton.setVisibility(View.GONE);
+
+        ThresholdInput = findViewById(R.id.threshold);
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
@@ -168,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         //  Accelerometer
         accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mSensorManager.registerListener(MainActivity.this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(MainActivity.this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     private void openSettings() {
@@ -229,10 +240,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // do nothing
     }
 
-    public void writeMeasurement(float[][] accelerations, double[] location) {
-        Context context = this;
+    public void writeMeasurement(List<float[]> accelerations, double[] location) {
         File path = context.getFilesDir();
-        File logsFile = new File(path, "tracking-app-logs.txt");
+        File logsFile = new File(path, FILE_NAME);
         try {
             stream = new FileOutputStream(logsFile);
         } catch (FileNotFoundException e) {
@@ -242,8 +252,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try {
             try {
                 for(float[] acceleration : accelerations) {
-
-                    String writeString = String.join(" ",
+                    Log.d("acceleration: ", String.valueOf(acceleration[0]));
+                    String writeString = String.join("=",
                             String.valueOf(acceleration[0]),
                             String.valueOf(acceleration[1]),
                             String.valueOf(acceleration[2]),
@@ -251,18 +261,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             String.valueOf(location[1]),
                             "\n"
                     );
-
                     stream.write(writeString.getBytes());
-
                 }
             } catch (IOException e) {
+                Toast.makeText(this, "File write failed", Toast.LENGTH_LONG).show();
                 e.printStackTrace();
             }
         } finally {
             try {
                 stream.close();
-                accelerationsIndex = 0;
-                Arrays.fill(accelerations, null);
+                //  empty accelerations
+                accelerations = new ArrayList<float[]>();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -273,29 +282,66 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // we received a sensor event. it is a good practice to check
         // that we received the proper event
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            acceleration = event.values;
-            AccelerationXText.setText(String.valueOf(acceleration[0]));
-            AccelerationYText.setText(String.valueOf(acceleration[1]));
-            AccelerationZText.setText(String.valueOf(acceleration[2]));
+            Log.d("event values", String.valueOf(event.values[0]));
+
+            AccelerationXText.setText(String.valueOf(event.values[0]));
+            AccelerationYText.setText(String.valueOf(event.values[1]));
+            AccelerationZText.setText(String.valueOf(event.values[2]));
 
             if(RecordingIsActive) {
-                accelerations[accelerationsIndex] = acceleration;
-                accelerationsIndex++;
+                accelerations.add(new float[] {event.values[0], event.values[1], event.values[2]});
             }
         }
     }
 
-    public void onClickBtn(View v)
+    public void onClickToggleBtn(View v)
     {
         if(RecordingIsActive) {
             Toast.makeText(this, "Stoped Recording", Toast.LENGTH_SHORT).show();
             ToggleButton.setText("Start Recording");
             RecordingIsActive = false;
+            AnalyseButton.setVisibility(View.VISIBLE);
         }
         else {
             Toast.makeText(this, "Started Recording", Toast.LENGTH_SHORT).show();
+            AnalyseButton.setVisibility(View.GONE);
             ToggleButton.setText("Stop Recording");
             RecordingIsActive = true;
+        }
+    }
+
+    public void onClickAnalyseBtn(View v) {
+       float threshold = Float.parseFloat(ThresholdInput.getText().toString());
+       analysis(threshold);
+       String toastText = String.format("Found %s potholes", potholeLocations.size());
+       Toast.makeText(this, toastText, Toast.LENGTH_SHORT).show();
+       potholeLocations = new ArrayList<float[]>();
+    }
+
+    public void analysis(float threshold) {
+        //  read file
+        try {
+            File path = context.getFilesDir();
+            File logsFile = new File(path, FILE_NAME);
+            BufferedReader br = new BufferedReader(new FileReader(logsFile));
+            String line;
+            Float z_accel_prev = 0f;
+            while ((line = br.readLine()) != null) {
+                String[] entries = line.split("=");
+                Float z_accel = Float.parseFloat(entries[2]);
+                float absolute_difference = Math.abs(z_accel - z_accel_prev);
+                if(absolute_difference > threshold) {
+                    float latitude = Float.parseFloat(entries[3]);
+                    float longitude =  Float.parseFloat(entries[4]);
+                    potholeLocations.add(new float[] {absolute_difference, latitude, longitude});
+                }
+                z_accel_prev = z_accel;
+            }
+            br.close();
+        }
+        catch (IOException e) {
+            Toast.makeText(this, "Analysis Failed", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
         }
     }
 
