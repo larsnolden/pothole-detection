@@ -17,6 +17,8 @@ import android.os.Debug;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,6 +48,12 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private static final int REQUEST_CHECK_SETTINGS = 100;
     private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
@@ -61,16 +69,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Location mCurrentLocation;
     private boolean mRequestingLocationUpdates = false;
 
+    private Boolean RecordingIsActive = false;
+
     private TextView AddressText;
     private TextView AccelerationXText;
     private TextView AccelerationYText;
     private TextView AccelerationZText;
 
-    // accelerometer
-    private float[] acceleration = {0, 0, 0};
+    private Button ToggleButton;
 
+    // accelerometer
+    float[] acceleration = {0, 0, 0};
+    private float[][] accelerations = new float[100000][3];
+    private int accelerationsIndex = 0;
     private SensorManager mSensorManager;
     private Sensor accelerometer;
+
+    // File
+    FileOutputStream stream;
+
+    public MainActivity() throws FileNotFoundException {
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +103,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         AccelerationYText = findViewById(R.id.accelerationY);
         AccelerationZText = findViewById(R.id.accelerationZ);
 
+        ToggleButton = findViewById(R.id.button);
+
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
 
@@ -95,6 +116,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 double latitude = mCurrentLocation.getLatitude();
                 double longitude = mCurrentLocation.getLongitude();
+
+                if(RecordingIsActive) {
+                    writeMeasurement(accelerations, new double[] {latitude, longitude});
+                }
 
                 AddressText.setText("Location: " + latitude + ", " + longitude);
             }
@@ -197,6 +222,46 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // do nothing
     }
 
+    public void writeMeasurement(float[][] accelerations, double[] location) {
+        Context context = this;
+        File path = context.getFilesDir();
+        File logsFile = new File(path, "tracking-app-logs.txt");
+        try {
+            stream = new FileOutputStream(logsFile);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            try {
+                for(float[] acceleration : accelerations) {
+
+                    String writeString = String.join(" ",
+                            String.valueOf(acceleration[0]),
+                            String.valueOf(acceleration[1]),
+                            String.valueOf(acceleration[2]),
+                            String.valueOf(location[0]),
+                            String.valueOf(location[1]),
+                            "\n"
+                    );
+
+                    stream.write(writeString.getBytes());
+
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } finally {
+            try {
+                stream.close();
+                accelerationsIndex = 0;
+                Arrays.fill(accelerations, null);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void onSensorChanged(SensorEvent event) {
         // we received a sensor event. it is a good practice to check
         // that we received the proper event
@@ -205,6 +270,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             AccelerationXText.setText(String.valueOf(acceleration[0]));
             AccelerationYText.setText(String.valueOf(acceleration[1]));
             AccelerationZText.setText(String.valueOf(acceleration[2]));
+
+            if(RecordingIsActive) {
+                accelerations[accelerationsIndex] = acceleration;
+                accelerationsIndex++;
+            }
+        }
+    }
+
+    public void onClickBtn(View v)
+    {
+        if(RecordingIsActive) {
+            Toast.makeText(this, "Stoped Recording", Toast.LENGTH_SHORT).show();
+            ToggleButton.setText("Start Recording");
+            RecordingIsActive = false;
+        }
+        else {
+            Toast.makeText(this, "Started Recording", Toast.LENGTH_SHORT).show();
+            ToggleButton.setText("Stop Recording");
+            RecordingIsActive = true;
         }
     }
 
