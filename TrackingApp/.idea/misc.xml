@@ -4,6 +4,9 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="..\:/CS 3rd Year/MOD9 Smart Spaces/Week 1/Challange/TrackingApp/app/src/main/res/layout/activity_main.xml" value="0.264" />
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.2966485507246377" />
+        <entry key="app/src/main/res/layout/activity_maps.xml" value="0.15070921985815602" />
+        <entry key="app/src/main/res/layout/fragment_maps.xml" value="0.15070921985815602" />
       </map>
     </option>
   </component>
