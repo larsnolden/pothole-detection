@@ -252,7 +252,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         try {
             try {
                 for(float[] acceleration : accelerations) {
-                    Log.d("acceleration: ", String.valueOf(acceleration[0]));
+//                    Log.d("acceleration: ", String.valueOf(acceleration[0]));
                     String writeString = String.join("=",
                             String.valueOf(acceleration[0]),
                             String.valueOf(acceleration[1]),
@@ -282,7 +282,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // we received a sensor event. it is a good practice to check
         // that we received the proper event
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            Log.d("event values", String.valueOf(event.values[0]));
+//            Log.d("event values", String.valueOf(event.values[0]));
 
             AccelerationXText.setText(String.valueOf(event.values[0]));
             AccelerationYText.setText(String.valueOf(event.values[1]));
@@ -292,6 +292,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 accelerations.add(new float[] {event.values[0], event.values[1], event.values[2]});
             }
         }
+
     }
 
     public void onClickToggleBtn(View v)
@@ -329,7 +330,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             while ((line = br.readLine()) != null) {
                 String[] entries = line.split("=");
                 Float z_accel = Float.parseFloat(entries[2]);
-                float absolute_difference = Math.abs(z_accel - z_accel_prev);
+                float absolute_difference = Math.abs(Math.abs(z_accel) - Math.abs(z_accel_prev));
                 if(absolute_difference > threshold) {
                     float latitude = Float.parseFloat(entries[3]);
                     float longitude =  Float.parseFloat(entries[4]);
