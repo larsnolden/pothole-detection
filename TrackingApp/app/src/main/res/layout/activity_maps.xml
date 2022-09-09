@@ -14,12 +14,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             tools:context=".MapsActivity" />
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/currentLocationButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            />
     </FrameLayout>
 
     <LinearLayout
