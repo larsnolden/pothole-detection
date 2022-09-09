@@ -1,9 +1,171 @@
 <?xml version="1.0" encoding="utf-8"?>
-<fragment xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:map="http://schemas.android.com/apk/res-auto"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/map"
-    android:name="com.google.android.gms.maps.SupportMapFragment"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MapsActivity" />
+    android:orientation="vertical">
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="10">
+        <fragment
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            tools:context=".MapsActivity" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/currentLocationButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            />
+    </FrameLayout>
+
+    <LinearLayout
+
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginBottom="10dp">
+
+        <Button
+            android:id="@+id/ToggleRecordButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Start" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginBottom="10dp">
+
+        <TextView
+            android:id="@+id/thresholdLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Threshold: "
+            android:textColor="@android:color/black"
+            android:gravity="center"
+            android:textSize="18sp"
+            />
+
+        <EditText
+            android:id="@+id/threshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:inputType="numberDecimal"
+            android:text="2" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/AccelerometerLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Accelerometer"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center"
+        android:textSize="18sp"
+        />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginBottom="10dp">
+
+        <LinearLayout
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/labelXAccel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X: "
+                />
+
+            <TextView
+                android:id="@+id/accelerationX"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X Accel"
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:gravity="center"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/labelYAccel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="y: " />
+
+            <TextView
+                android:gravity="center"
+                android:id="@+id/accelerationY"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Y Accel"
+                android:textSize="16sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/labelZAccel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Z:" />
+
+            <TextView
+                android:id="@+id/accelerationZ"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Z Accel"
+                android:textSize="16sp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/LocationLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Location"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center"
+        android:textSize="18sp"
+        />
+
+    <TextView
+        android:id="@+id/coordinatesText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GPS Coordinates"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center"
+        android:textSize="16sp"
+        android:layout_marginBottom="10dp"
+        />
+
+
+
+</LinearLayout>

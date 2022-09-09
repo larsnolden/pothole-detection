@@ -95,6 +95,14 @@
         android:text="Analyse"
         android:translationY="50px" />
 
+    <Button
+        android:id="@+id/button3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onClickAnalyseBtn"
+        android:text="Go to map"
+        android:translationY="50px" />
+
     <EditText
         android:id="@+id/threshold"
         android:layout_width="match_parent"

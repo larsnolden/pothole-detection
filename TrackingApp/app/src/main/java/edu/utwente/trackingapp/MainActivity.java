@@ -15,6 +15,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
@@ -60,7 +61,6 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private Button ToggleButton;
     private Button AnalyseButton;
+    private Button goToMapButton;
 
     private EditText ThresholdInput;
 
@@ -282,7 +283,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // we received a sensor event. it is a good practice to check
         // that we received the proper event
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-//            Log.d("event values", String.valueOf(event.values[0]));
+            //Log.d("event values", String.valueOf(event.values[0]));
 
             AccelerationXText.setText(String.valueOf(event.values[0]));
             AccelerationYText.setText(String.valueOf(event.values[1]));
@@ -292,7 +293,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 accelerations.add(new float[] {event.values[0], event.values[1], event.values[2]});
             }
         }
-
     }
 
     public void onClickToggleBtn(View v)
@@ -346,6 +346,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    private void openMaps() {
+        Intent intent = new Intent(this, MapsActivity.class);
+        startActivity(intent);
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -361,4 +366,5 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             stopLocationUpdates();
         }
     }
+
 }
