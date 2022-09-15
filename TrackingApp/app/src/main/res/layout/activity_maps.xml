@@ -24,10 +24,10 @@
         android:layout_marginBottom="10dp">
 
         <Button
-            android:id="@+id/ToggleRecordButton"
+            android:id="@+id/ToggleScan"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Start" />
+            android:text="Scan" />
 
     </LinearLayout>
 
@@ -38,112 +38,45 @@
         android:layout_marginBottom="10dp">
 
         <TextView
-            android:id="@+id/thresholdLabel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Threshold: "
-            android:textColor="@android:color/black"
-            android:gravity="center"
-            android:textSize="18sp"
-            />
+            android:id="@+id/labelKnownDevices"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Known devices detected:" />
 
-        <EditText
-            android:id="@+id/threshold"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:inputType="numberDecimal"
-            android:text="2" />
-
+        <TextView
+            android:id="@+id/valueIBeacons"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="0" />
     </LinearLayout>
 
+
     <TextView
-        android:id="@+id/AccelerometerLabel"
+        android:id="@+id/indoorLocationLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Accelerometer"
+        android:text="Location from Beacons"
         android:textColor="@android:color/black"
         android:layout_gravity="center"
         android:textSize="18sp"
         />
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/indoorCoordinatesText"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:layout_marginBottom="10dp">
-
-        <LinearLayout
-            android:gravity="center"
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-            <TextView
-                android:id="@+id/labelXAccel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="X: "
-                />
-
-            <TextView
-                android:id="@+id/accelerationX"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="X Accel"
-                android:textSize="16sp"
-                android:textColor="@android:color/black"
-                />
-        </LinearLayout>
-
-        <LinearLayout
-            android:gravity="center"
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-            <TextView
-                android:id="@+id/labelYAccel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="y: " />
-
-            <TextView
-                android:gravity="center"
-                android:id="@+id/accelerationY"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Y Accel"
-                android:textSize="16sp"
-                android:textColor="@android:color/black" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_weight="1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
-            <TextView
-                android:id="@+id/labelZAccel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Z:" />
-
-            <TextView
-                android:id="@+id/accelerationZ"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Z Accel"
-                android:textSize="16sp"
-                android:textColor="@android:color/black" />
-        </LinearLayout>
-
-    </LinearLayout>
+        android:text="Indoor coordinates"
+        android:textColor="@android:color/black"
+        android:layout_gravity="center"
+        android:textSize="16sp"
+        android:layout_marginBottom="10dp"
+        />
 
     <TextView
         android:id="@+id/LocationLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Location"
+        android:text="Location from GPS"
         android:textColor="@android:color/black"
         android:layout_gravity="center"
         android:textSize="18sp"

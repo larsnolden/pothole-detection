@@ -1,20 +1,17 @@
 package edu.utwente.trackingapp;
 
+import static java.lang.Math.cos;
+import static java.lang.Math.sin;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentActivity;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -24,10 +21,13 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.clj.fastble.BleManager;
+import com.clj.fastble.callback.BleScanCallback;
+import com.clj.fastble.data.BleDevice;
+import com.clj.fastble.scan.BleScanRuleConfig;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -39,17 +39,13 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.karumi.dexter.Dexter;
@@ -59,16 +55,14 @@ import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.single.PermissionListener;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import edu.utwente.trackingapp.databinding.ActivityMapsBinding;
 
-public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback, SensorEventListener {
+public class MapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private static final int REQUEST_CHECK_SETTINGS = 100;
     private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
@@ -89,20 +83,20 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ArrayList<LatLng> routeCoordinates;
     private Polyline drawRoute;
 
-    private TextView AccelerationXText;
-    private TextView AccelerationYText;
-    private TextView AccelerationZText;
     private TextView GPSCoordinates;
-    private Button ToggleRecordButton;
-    private EditText ThresholdInput;
 
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
 
-    // accelerometer
-    List<SensorEntryData> sensorEntries = new ArrayList<SensorEntryData>();
-    private SensorManager mSensorManager;
-    private Sensor accelerometer;
+    private Button ScanButton;
+    private boolean isScanning = false;
+    private TextView CountIBeacons;
+    private ArrayList<Antena> availablePOIs = new ArrayList<Antena>();
+    private ArrayList<Marker> poiMarkers = new ArrayList<Marker>();
+    private Marker currentPossition;
+
+    int countKnownScannedDevices = 0;
+    private TextView IndoorCoordinates;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,32 +111,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapFragment.getMapAsync(this);
 
         GPSCoordinates = findViewById(R.id.coordinatesText);
-
-        AccelerationXText = findViewById(R.id.accelerationX);
-        AccelerationYText = findViewById(R.id.accelerationY);
-        AccelerationZText = findViewById(R.id.accelerationZ);
-
-        ToggleRecordButton = findViewById(R.id.ToggleRecordButton);
-        ToggleRecordButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(RecordingIsActive) {
-                    ToggleRecordButton.setText("Start");
-                    RecordingIsActive = false;
-                }
-                else {
-                    ToggleRecordButton.setText("Stop");
-                    RecordingIsActive = true;
-                }
-            }
-        });
-
-        // Get an instance of the SensorManager
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-
-        //  Accelerometer
-        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mSensorManager.registerListener(MapsActivity.this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        IndoorCoordinates = findViewById(R.id.indoorCoordinatesText);
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mSettingsClient = LocationServices.getSettingsClient(this);
@@ -193,33 +162,254 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                     }
                 }).check();
 
+        CountIBeacons = findViewById(R.id.valueIBeacons);
+
+        Import antennasImport = new Import();
+        Antena[] knownAntennas = antennasImport.getAntennas();
+
+        BleManager.getInstance().init(getApplication());
+
+        BleScanRuleConfig scanRuleConfig = new BleScanRuleConfig.Builder()
+                //.setServiceUuids(serviceUuids)
+                //.setDeviceName(true, names)
+                //.setDeviceMac(mac)
+                .setAutoConnect(false)
+                .setScanTimeOut(7500)
+                .build();
+
+        BleManager.getInstance().initScanRule(scanRuleConfig);
+
+        ScanButton = findViewById(R.id.ToggleScan);
+
+        ScanButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if (isScanning) {
+                    BleManager.getInstance().cancelScan();
+                } else {
+                    BleManager.getInstance().scan(new BleScanCallback() {
+                        @Override
+                        public void onScanStarted(boolean success) {
+                            System.out.println("Scan started:" + success);
+                        }
+
+                        @Override
+                        public void onScanning(BleDevice bleDevice) {
+                            for (Antena antena: knownAntennas) {
+                                for (String macAddress: antena.getMacAddresses()) {
+                                    if (macAddress.equals(bleDevice.getMac().toUpperCase())) {
+                                        System.out.println("Familiar Device: " + bleDevice.getMac().toLowerCase() +
+                                                " rssi: " + bleDevice.getRssi());
+                                        System.out.println("From antenna: " + antena.getName());
+                                        countKnownScannedDevices += 1;
+                                        double rssi = bleDevice.getRssi();
+                                        if(antena.getRssi() < rssi) {
+
+                                            System.out.println("prev rssi:" + antena.getRssi() + " prev dist:" + calculateDistance(55, antena.getRssi()));
+                                            System.out.println("new rssi:" + rssi + " new distance:" + calculateDistance(55, rssi));
+
+                                            antena.setRssi(rssi);
+                                            if (!availablePOIs.contains(antena)) {
+                                                availablePOIs.add(antena);
+                                            }
+                                        } else {
+                                            System.out.println("There is a device from the same antenna with a higher signal");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        @Override
+                        public void onScanFinished(List<BleDevice> scanResultList) {
+//                            System.out.println("allDevices" + scanResultList.toString());
+                            CountIBeacons.setText(String.valueOf((countKnownScannedDevices)));
+                            updateMap();
+                        }
+                    });
+                }
+                isScanning = !isScanning;
+            }
+        });
+
     }
 
-    public void onSensorChanged(SensorEvent event) {
-        // we received a sensor event. it is a good practice to check
-        // that we received the proper event
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            //Log.d("event values", String.valueOf(event.values[0]));
+    void updateMap() {
 
-            double x = event.values[0];
-            double y = event.values[1];
-            double z = event.values[2];
+        for (Marker oldMarker: poiMarkers) {
+            oldMarker.remove();
+        }
+        poiMarkers.clear();
 
-            AccelerationXText.setText(String.valueOf(x));
-            AccelerationYText.setText(String.valueOf(y));
-            AccelerationZText.setText(String.valueOf(z));
+        for(Antena poi: availablePOIs) {
+            poi.setDistance(calculateDistanceFromRssi(55, poi.getRssi()));
+            poi.setRadialLocations(calculatePossibleRadialLocations(poi.getLongitude(), poi.getLatitude(), poi.getDistance()));
+            System.out.println("poi found" + poi.getName() + " " + poi.getDistance());
 
-            if(RecordingIsActive) {
-                double latitude = mCurrentLocation.getLatitude();
-                double longitude = mCurrentLocation.getLongitude();
-                sensorEntries.add(new SensorEntryData(x, y, z, latitude, longitude));
+            LatLng possition = new LatLng(poi.getLatitude(), poi.getLongitude());
+            String name = "Antena " + poi.getName();
+
+            System.out.println(name + " Distance: " + poi.getDistance());
+
+            Marker markerName = mMap.addMarker(new MarkerOptions()
+                    .position(possition)
+                    .title(name + " Distance: " + poi.getDistance()));
+
+            poiMarkers.add(markerName);
+        }
+
+        LatLng currentLatLng = determineLocation(availablePOIs);
+        currentPossition = mMap.addMarker(new MarkerOptions()
+                .position(currentLatLng)
+                .title("Current Possition"));
+
+
+        for (Antena poi: availablePOIs) {
+            poi.setRssi(-1000);
+        }
+        countKnownScannedDevices = 0;
+        availablePOIs.clear();
+    }
+
+
+    LatLng determineLocation(ArrayList<Antena> availablePOIs) {
+        ArrayList<LatLng> smallestTrianglePoints = new ArrayList<LatLng>();
+        double minTriangleArea = 100000;
+
+
+        Collections.sort(availablePOIs, new Comparator<Antena>() {
+                    @Override public int compare(Antena bo1, Antena bo2) {
+                        return (bo1.getRssi() <  bo2.getRssi() ? 1:-1);
+                    }
+        });
+
+        ArrayList<Antena> best3POIs = new ArrayList<Antena>();
+        best3POIs.add(availablePOIs.get(0));
+        best3POIs.add(availablePOIs.get(1));
+        best3POIs.add(availablePOIs.get(2));
+
+        System.out.println("Best");
+        System.out.println(best3POIs.get(0).getName() + " dist:" + best3POIs.get(0).getDistance());
+        System.out.println(best3POIs.get(1).getName() + " dist:" + best3POIs.get(1).getDistance());
+        System.out.println(best3POIs.get(2).getName() + " dist:" + best3POIs.get(2).getDistance());
+
+        // TODO: take the 3 highest signal strength poi's
+        for(Antena poi1: best3POIs) {
+            System.out.println("poi" + poi1.toString());
+            for (LatLng radialLocationA : poi1.getRadialLocations()) {
+                for (Antena poi2 : best3POIs) {
+                    if(poi1.getName() != poi2.getName()) {
+                        for (LatLng radialLocationB : poi2.getRadialLocations()) {
+                            for(Antena poi3: best3POIs) {
+                                if(poi2.getName() != poi3.getName()) {
+                                    for (LatLng radialLocationC : poi3.getRadialLocations()) {
+                                        double distanceAB = calculateDistanceBetweenPoints(radialLocationA, radialLocationB);
+                                        double distanceAC = calculateDistanceBetweenPoints(radialLocationA, radialLocationC);
+                                        double distanceBC = calculateDistanceBetweenPoints(radialLocationB, radialLocationC);
+
+                                        // Herons formula
+                                        double area = (distanceAB+distanceAC+distanceBC)/2.0d;
+                                        double totalTriangleArea = Math.sqrt(area* (area - distanceAB) * (area - distanceAC) * (area - distanceBC));
+                                        if(totalTriangleArea < minTriangleArea) {
+                                            //  update the new smallest found triangle
+                                            smallestTrianglePoints.clear();
+                                            smallestTrianglePoints.add(radialLocationA);
+                                            smallestTrianglePoints.add(radialLocationB);
+                                            smallestTrianglePoints.add(radialLocationC);
+                                            minTriangleArea = totalTriangleArea;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+        System.out.println("smallest triangle" + smallestTrianglePoints.get(0) + " " +  smallestTrianglePoints.get(1) + " " +  smallestTrianglePoints.get(2));
+        return getCentroid(smallestTrianglePoints.get(0), smallestTrianglePoints.get(1), smallestTrianglePoints.get(2));
+    }
+
+
+    LatLng getCentroid(LatLng pos1, LatLng pos2, LatLng pos3) {
+        // centroid of triangle
+        double latCenter = (pos1.latitude + pos2.latitude + pos3.latitude)/3;
+        double longCenter = (pos1.longitude + pos2.longitude + pos3.longitude)/3;
+        return new LatLng(latCenter, longCenter);
+    }
+
+    double metersToLatLong(double meters) {
+        double radiusEarth = 6371000;
+        return meters*360/(2*Math.PI*radiusEarth);
+    }
+
+    ArrayList<LatLng> calculatePossibleRadialLocations(double centerLong, double centerLat, double radius) {
+        ArrayList<LatLng> radialLocations = new ArrayList<LatLng>();
+        for(int theta=0; theta <= 100; theta++) {
+            double xCoord = cos(Math.toRadians(theta)) * radius;
+            double yCoord = sin(Math.toRadians(theta)) * radius;
+
+            double latitude = centerLat + metersToLatLong(xCoord);
+            double longitude = centerLong + metersToLatLong(yCoord);
+            System.out.println("lat: " + latitude + ",  " + "lon: " + longitude);
+            radialLocations.add(new LatLng(latitude, longitude));
+        }
+        return radialLocations;
+    }
+
+    protected static double calculateDistanceFromRssi(int measuredPower, double rssi) {
+        if (rssi == 0) {
+            return -1.0; // if we cannot determine distance, return -1.
+        }
+        double ratio = rssi*1.0/measuredPower;
+        if (ratio < 1.0) {
+            return Math.pow(ratio,10);
+        }
+        else {
+            double distance =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;
+            return distance;
         }
     }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    public static double calculateDistanceBetweenPoints(LatLng pos1, LatLng pos2)
+    {
+        // The math module contains a function
+        // named toRadians which converts from
+        // degrees to radians.
+        double lon1 = Math.toRadians(pos1.longitude);
+        double lon2 = Math.toRadians(pos2.longitude);
+        double lat1 = Math.toRadians(pos1.latitude);
+        double lat2 = Math.toRadians(pos2.latitude);
 
+        // Haversine formula
+        double dlon = lon2 - lon1;
+        double dlat = lat2 - lat1;
+        double a = Math.pow(Math.sin(dlat / 2), 2)
+                + Math.cos(lat1) * Math.cos(lat2)
+                * Math.pow(Math.sin(dlon / 2),2);
+
+        double c = 2 * Math.asin(Math.sqrt(a));
+
+        // Radius of earth in kilometers. Use 3956
+        // for miles
+        double r = 6371;
+
+        return(c * r);
+    }
+
+    protected static double calculateDistance(int measuredPower, double rssi) {
+        if (rssi == 0) {
+            return -1.0; // if we cannot determine distance, return -1.
+        }
+        double ratio = rssi*1.0/measuredPower;
+        if (ratio < 1.0) {
+            return Math.pow(ratio,10);
+        }
+        else {
+            double distance =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;
+            return distance;
+        }
     }
 
     private void openSettings() {
@@ -275,26 +465,15 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         int permissionState = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
         return permissionState == PackageManager.PERMISSION_GRANTED;
     }
-
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
         mMap = googleMap;
     }
 
-
+/**
     Handler handler = new Handler();
     Runnable runnable;
-    int delay = 250;
-    SensorEntryData previousAveragedSensorEntry;
+    int delay = 100000;
 
     @Override
     protected void onResume() {
@@ -305,156 +484,11 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             handler.postDelayed(runnable = new Runnable() {
                 public void run() {
                     handler.postDelayed(runnable, delay);
-                    if (RecordingIsActive) {
-
-                        double latitude = mCurrentLocation.getLatitude();
-                        double longitude = mCurrentLocation.getLongitude();
-
-                        if (!routeCoordinates.isEmpty()) {
-                            int indexLastElement = routeCoordinates.size() - 1;
-                            if (latitude != routeCoordinates.get(indexLastElement).latitude
-                                    || longitude != routeCoordinates.get(indexLastElement).longitude) {
-                                routeCoordinates.add(new LatLng(latitude, longitude));
-                            }
-
-                            if (drawRoute != null) drawRoute.remove();
-                            PolylineOptions polylineOptions = new PolylineOptions()
-                                    .addAll(routeCoordinates);
-                            drawRoute = mMap.addPolyline(polylineOptions);
-
-                        } else {
-                            routeCoordinates.add(new LatLng(latitude, longitude));
-                        }
-
-                        SensorEntryData averagedSensorEntry = averagingSensorData(sensorEntries);
-                        Log.d("avg Z: ", String.valueOf(averagedSensorEntry.getZ()));
-                        sensorEntries = new ArrayList<SensorEntryData>();
-
-                        ThresholdInput = findViewById(R.id.threshold);
-                        float threshold = Float.parseFloat(ThresholdInput.getText().toString());
-
-                        if (previousAveragedSensorEntry == null) {
-                            previousAveragedSensorEntry = averagedSensorEntry;
-                        } else if (potentialPothole(previousAveragedSensorEntry, averagedSensorEntry, threshold)) {
-                            addPothole(averagedSensorEntry);
-                        }
-                    } else {
-                        if (drawRoute != null) drawRoute.remove();
-                        routeCoordinates.clear();
-                    }
+                    System.out.println("handler");
                 }
             }, delay);
             super.onResume();
         }
-    }
-
-    public SensorEntryData averagingSensorData(List<SensorEntryData> sensorEntries) {
-
-        double sumX = 0;
-        double sumY = 0;
-        double sumZ = 0;
-
-        for (SensorEntryData sensorEntry: sensorEntries) {
-            sumX += sensorEntry.getX();
-            sumY += sensorEntry.getY();
-            sumZ += sensorEntry.getZ();
-        }
-
-        int entriesLength = sensorEntries.size();
-        double avgX = sumX/entriesLength;
-        double avgY = sumY/entriesLength;
-        double avgZ = sumZ/entriesLength;
-
-        double latitude = mCurrentLocation.getLatitude();
-        double longitude = mCurrentLocation.getLongitude();
-
-        return new SensorEntryData(avgX, avgY, avgZ, latitude, longitude);
-    }
-
-    public boolean potentialPothole(SensorEntryData previous, SensorEntryData current, float threshold) {
-
-        double zAxisPrevious = previous.getZ();
-        double zAxisCurrent = current.getZ();
-
-        double absolute_difference = Math.abs(Math.abs(zAxisPrevious) - Math.abs(zAxisCurrent));
-        return absolute_difference > threshold;
-
-    }
-
-    private void addPothole(SensorEntryData averagedSensorEntry) {
-
-        if (potholesCoordinates == null) {
-            potholesCoordinates = new ArrayList<LatLng>();
-        }
-
-        if (!clusteringPotholes(averagedSensorEntry)) {
-            LatLng potholeCoordinatesForDrawing =
-                    new LatLng(averagedSensorEntry.getLatitude(), averagedSensorEntry.getLongitude());
-
-            System.out.println("adding pothole");
-            System.out.println("long: " + averagedSensorEntry.getLongitude());
-            System.out.println("lat: " + averagedSensorEntry.getLatitude());
-
-            potholesCoordinates.add(potholeCoordinatesForDrawing);
-
-            mMap.addMarker(new MarkerOptions()
-                    .position(potholeCoordinatesForDrawing)
-                    .title("pothole")
-                    .visible(true));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(potholeCoordinatesForDrawing, 16));
-            Toast.makeText(MapsActivity.this, "pothole detected", Toast.LENGTH_SHORT).show();
-        } else {
-            System.out.println("clustered pothole");
-            Toast.makeText(MapsActivity.this, "pothole clustered", Toast.LENGTH_SHORT).show();
-        }
-
-
-    }
-
-    private boolean clusteringPotholes(SensorEntryData averagedSensorEntry) {
-
-        if (potholesCoordinates.isEmpty()) {
-            return false;
-        }
-
-        double latitude = averagedSensorEntry.getLatitude();
-        double longitude = averagedSensorEntry.getLongitude();
-
-        for (LatLng potholeCoordinate: potholesCoordinates) {
-            if (distance(latitude, potholeCoordinate.latitude, longitude, potholeCoordinate.longitude) < 0.02) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public static double distance(double lat1, double lat2, double lon1, double lon2)
-    {
-
-        // The math module contains a function
-        // named toRadians which converts from
-        // degrees to radians.
-        lon1 = Math.toRadians(lon1);
-        lon2 = Math.toRadians(lon2);
-        lat1 = Math.toRadians(lat1);
-        lat2 = Math.toRadians(lat2);
-
-        // Haversine formula
-        double dlon = lon2 - lon1;
-        double dlat = lat2 - lat1;
-        double a = Math.pow(Math.sin(dlat / 2), 2)
-                + Math.cos(lat1) * Math.cos(lat2)
-                * Math.pow(Math.sin(dlon / 2),2);
-
-        double c = 2 * Math.asin(Math.sqrt(a));
-
-        // Radius of earth in kilometers. Use 3956
-        // for miles
-        double r = 6371;
-
-        // calculate the result
-        System.out.println("Distance between potential pothole:");
-        return(c * r);
     }
 
 
@@ -465,5 +499,14 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
             stopLocationUpdates();
         }
         handler.removeCallbacks(runnable);
+    }
+    */
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mRequestingLocationUpdates) {
+            stopLocationUpdates();
+        }
     }
 }

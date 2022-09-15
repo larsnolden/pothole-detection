@@ -66,4 +66,9 @@ dependencies {
 
     // Material Design
     implementation 'com.google.android.material:material:1.6.1'
+
+    //BLE Scanner
+    implementation 'com.github.Jasonchenlijian:FastBle:2.4.0'
+
+    implementation 'com.lemmingapex.trilateration:trilateration:1.0.2'
 }
