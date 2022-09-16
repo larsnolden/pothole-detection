@@ -12,6 +12,15 @@ public class Antena {
     private double rssi;
     private double distance;
     private ArrayList<LatLng> radialLocations;
+    private double correctionFactor = 1;
+
+    public double getCorrectionFactor() {
+        return correctionFactor;
+    }
+
+    public void setCorrectionFactor(double correctionFactor) {
+        this.correctionFactor = correctionFactor;
+    }
 
     public String getName() {
         return name;

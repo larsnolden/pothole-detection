@@ -207,7 +207,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         if(antena.getRssi() < rssi) {
 
                                             System.out.println("prev rssi:" + antena.getRssi() + " prev dist:" + calculateDistance(55, antena.getRssi()));
-                                            System.out.println("new rssi:" + rssi + " new distance:" + calculateDistance(55, rssi));
+                                            System.out.println("new better rssi:" + rssi + " new distance:" + calculateDistance(55, rssi));
 
                                             antena.setRssi(rssi);
                                             if (!availablePOIs.contains(antena)) {
@@ -243,7 +243,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         poiMarkers.clear();
 
         for(Antena poi: availablePOIs) {
-            poi.setDistance(calculateDistanceFromRssi(55, poi.getRssi()));
+            poi.setDistance(calculateDistanceFromRssi(55, poi.getRssi(), poi.getCorrectionFactor()));
             poi.setRadialLocations(calculatePossibleRadialLocations(poi.getLongitude(), poi.getLatitude(), poi.getDistance()));
             System.out.println("poi found" + poi.getName() + " " + poi.getDistance());
 
@@ -358,7 +358,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         return radialLocations;
     }
 
-    protected static double calculateDistanceFromRssi(int measuredPower, double rssi) {
+    protected static double calculateDistanceFromRssi(int measuredPower, double rssi, double correctionFactor) {
         if (rssi == 0) {
             return -1.0; // if we cannot determine distance, return -1.
         }
@@ -368,7 +368,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
         else {
             double distance =  (0.89976)*Math.pow(ratio,7.7095) + 0.111;
-            return distance;
+            return distance * correctionFactor;
         }
     }
 
