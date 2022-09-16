@@ -206,8 +206,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                                         double rssi = bleDevice.getRssi();
                                         if(antena.getRssi() < rssi) {
 
-                                            System.out.println("prev rssi:" + antena.getRssi() + " prev dist:" + calculateDistance(55, antena.getRssi()));
-                                            System.out.println("new better rssi:" + rssi + " new distance:" + calculateDistance(55, rssi));
+                                            System.out.println("prev rssi:" + antena.getRssi() + " prev dist:" + calculateDistance(60, antena.getRssi()));
+                                            System.out.println("new better rssi:" + rssi + " new distance:" + calculateDistance(60, rssi));
 
                                             antena.setRssi(rssi);
                                             if (!availablePOIs.contains(antena)) {
@@ -243,7 +243,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         poiMarkers.clear();
 
         for(Antena poi: availablePOIs) {
-            poi.setDistance(calculateDistanceFromRssi(55, poi.getRssi(), poi.getCorrectionFactor()));
+            poi.setDistance(calculateDistanceFromRssi(60, poi.getRssi(), poi.getCorrectionFactor()));
             poi.setRadialLocations(calculatePossibleRadialLocations(poi.getLongitude(), poi.getLatitude(), poi.getDistance()));
             System.out.println("poi found" + poi.getName() + " " + poi.getDistance());
 
