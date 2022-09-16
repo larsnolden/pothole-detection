@@ -42,6 +42,8 @@ import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -184,10 +186,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         ScanButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(currentPossition != null) {
 
-                if (isScanning) {
-                    BleManager.getInstance().cancelScan();
-                } else {
+                    currentPossition.remove();
+                }
                     BleManager.getInstance().scan(new BleScanCallback() {
                         @Override
                         public void onScanStarted(boolean success) {
@@ -228,8 +230,6 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
                             updateMap();
                         }
                     });
-                }
-                isScanning = !isScanning;
             }
         });
 
@@ -262,8 +262,10 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         LatLng currentLatLng = determineLocation(availablePOIs);
         currentPossition = mMap.addMarker(new MarkerOptions()
                 .position(currentLatLng)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
                 .title("Current Possition"));
 
+        IndoorCoordinates.setText(currentLatLng.latitude + " "+ currentLatLng.longitude);
 
         for (Antena poi: availablePOIs) {
             poi.setRssi(-1000);

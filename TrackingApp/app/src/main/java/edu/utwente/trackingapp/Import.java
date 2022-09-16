@@ -3,7 +3,7 @@ package edu.utwente.trackingapp;
 public class Import {
 
     private String[] AntennaAMacs = {"D7:08:44:3C:7F:09", "EC:1C:37:B5:B4:4F", "EB:A2:1B:CE:31:EC", "DE:AC:E4:81:12:D6",
-            "F9:B0:44:14:19:F9", "D6:12:35:99:CA:17", "C1:6F:31:CF:3E:6D", "EA:64:7A:3A:35:75","24:FF:AA:DD:A1:79", "57:2E:66:A4:75:4F"
+            "F9:B0:44:14:19:F9", "D6:12:35:99:CA:17", "C1:6F:31:CF:3E:6D", "EA:64:7A:3A:35:75"
     };
 
     private String[] AntennaBMacs = {"D5:88:79:6F:9C:44", "CF:3E:A2:5B:33:65", "F7:D6:23:D0:DF:24", "E5:CD:CB:19:D3:17",
